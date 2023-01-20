@@ -18,7 +18,7 @@ public class SongLoaderThread extends Thread{
 
 	private boolean isUrl = false;
 
-	public SongLoaderThread(String location) throws IOException {
+	public SongLoaderThread(String location, File dir) throws IOException {
 		this.location = location;
 		if (location.startsWith("http://") || location.startsWith("https://")) {
 			isUrl = true;
@@ -27,17 +27,17 @@ public class SongLoaderThread extends Thread{
 		else if (location.contains("/") || location.contains("\\")) {
 			throw new IOException("Invalid characters in song name: " + location);
 		}
-		else if (getSongFile(location).exists()) {
-			songPath = getSongFile(location);
+		else if (getSongFile(location, dir).exists()) {
+			songPath = getSongFile(location, dir);
 		}
-		else if (getSongFile(location+".mid").exists()) {
-			songPath = getSongFile(location+".mid");
+		else if (getSongFile(location+".mid", dir).exists()) {
+			songPath = getSongFile(location+".mid", dir);
 		}
-		else if (getSongFile(location+".midi").exists()) {
-			songPath = getSongFile(location+".midi");
+		else if (getSongFile(location+".midi", dir).exists()) {
+			songPath = getSongFile(location+".midi", dir);
 		}
-		else if (getSongFile(location+".nbs").exists()) {
-			songPath = getSongFile(location+".nbs");
+		else if (getSongFile(location+".nbs", dir).exists()) {
+			songPath = getSongFile(location+".nbs", dir);
 		}
 		else {
 			throw new IOException("Could not find song: " + location);
@@ -79,7 +79,7 @@ public class SongLoaderThread extends Thread{
 		}
 	}
 
-	private File getSongFile(String name) {
-		return new File(SongPlayer.SONG_DIR, name);
+	private File getSongFile(String name, File dir) {
+		return new File(dir, name);
 	}
 }

@@ -30,7 +30,7 @@ Plays a particular midi from the .minecraft/songs folder, or, if a url is specif
 
 If there is a song already playing, the new song will be added to the queue.
 
-### $playlist \<create, delete, play> <playlist name>
+### $playlist \<create, delete, play> \<playlist name>
 ### OR: $playlist \<sort> <addedfirst, alphabetically, shuffle>
 ### OR: $playlist \<edit> \<playlist name> \<add, remove> \<song>
 Manage or play a list of songs
@@ -39,7 +39,7 @@ Manage or play a list of songs
 Sets the command prefix used to execute these commands.
 Example: `$prefix !` will change commands to `!example command` instead of `$example command`
 
-### $toggle <swing, rotate, useCommandsToPlay> <false, true>
+### $toggle \<swing, rotate, useCommandsToPlay> \<false, true>
 Toggles certain features I added as ideas when forking this. All are toggled to false by default.
 - Swing: weather you swing your hand when you play a noteblock
 - Rotate: weather you rotate to the noteblock you are placing / playing
@@ -112,14 +112,14 @@ It plays every single noteblock sound possible in order.
 However, there are 400 possible noteblocks but the max stage size is 300, so that last 100 notes aren't played.
 
 # Mechanism
---- using noteblocks ---
+###--- using noteblocks ---
 SongPlayer places noteblocks with nbt and instrument data already in them, so the noteblocks do not need to be individually tuned. Ayunami2000 has previously done a proof-of-concept of this method.
 
 My client will automatically detect what noteblocks are needed and place them automatically before each song is played, which makes playing songs quite easy. The only drawback is that you need to be able to switch between creative and survival mode, which my client will attempt to do automatically.
 
 When playing a song, freecam is enabled. You will be able to move around freely, but in reality you are only moving your camera while your player stays at the center of the noteblocks. This is because noteblocks can only be played if you're within reach distance of them, so you have to stand at the center of the noteblocks to play them, but it's still nice to be able to move around while your song is playing.
 
---- using commands ---
+###--- using commands ---
 SongPlayer will use commands such as /execute and display progress for everyone with /title by default.
 
 This will only work if you have op on a minecraft server, and some servers may kick you for spamming.

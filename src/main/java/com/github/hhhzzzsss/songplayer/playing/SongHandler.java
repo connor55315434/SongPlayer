@@ -444,6 +444,10 @@ public class SongHandler {
     }
     private void attackBlock(BlockPos bp) {
         ClientPlayerEntity player = SongPlayer.MC.player;
+        //
+        //if (player.isCreative() || player.isSpectator()) {
+        //    setSurvivalIfNeeded();
+        //}
 
         SongPlayer.MC.interactionManager.attackBlock(bp, Direction.UP);
 

@@ -37,7 +37,7 @@ public class SongPlayer implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		System.out.println("Loading SongPlayer v3.0.0 made by hhhzzzsss, forked by Sk8kman, and tested by Lizard16"); //yes I'm paranoid someone will steal credit for my spaghetti code
+		System.out.println("Loading SongPlayer v3.0.0 made by hhhzzzsss, forked by Sk8kman, and tested by Lizard16");
 		CommandProcessor.initCommands();
 		PLAYLISTS_DIR.mkdirs();
 		ModProperties.getInstance().setup();

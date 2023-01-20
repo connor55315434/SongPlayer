@@ -3,6 +3,7 @@ package com.github.hhhzzzsss.songplayer.song;
 public class Note implements Comparable<Note> {
 	public int noteId;
 	public long time;
+	public short pitch;
 	public Note(int note, long time) {
 		this.noteId = note;
 		this.time = time;

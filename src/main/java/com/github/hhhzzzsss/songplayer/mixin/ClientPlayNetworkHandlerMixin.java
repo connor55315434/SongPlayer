@@ -95,4 +95,3 @@ public class ClientPlayNetworkHandlerMixin {
 		SongPlayer.removeFakePlayer(); //fixes fakeplayer not rendering the first time
 	}
 }
-

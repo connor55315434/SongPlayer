@@ -6,7 +6,8 @@
   "name": "Song Player",
   "description": "A plugin for building and playing noteblock songs in Minecraft",
   "authors": [
-    "hhhzzzsss"
+    "hhhzzzsss",
+    "Sk8kman"
   ],
   "contact": {
     "sources": "https://github.com/hhhzzzsss/SongPlayer"

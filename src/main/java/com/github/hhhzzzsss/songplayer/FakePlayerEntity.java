@@ -13,9 +13,9 @@ public class FakePlayerEntity extends OtherClientPlayerEntity {
 	
 	public FakePlayerEntity() {
 		super(SongPlayer.MC.world, SongPlayer.MC.player.getGameProfile());
-		
+
 		copyStagePosAndPlayerLook();
-		
+
 		getInventory().clone(player.getInventory());
 		
 		Byte playerModel = player.getDataTracker().get(PlayerEntity.PLAYER_MODEL_PARTS);
@@ -27,8 +27,9 @@ public class FakePlayerEntity extends OtherClientPlayerEntity {
 		capeX = getX();
 		capeY = getY();
 		capeZ = getZ();
-		
+
 		world.addEntity(getId(), this);
+		SongPlayer.fakePlayer = this;
 	}
 	
 	public void resetPlayerPosition() {
@@ -37,13 +38,18 @@ public class FakePlayerEntity extends OtherClientPlayerEntity {
 	
 	public void copyStagePosAndPlayerLook() {
 		Stage stage = SongHandler.getInstance().stage;
-		if (stage != null) {
-			refreshPositionAndAngles(stage.position.getX()+0.5, stage.position.getY(), stage.position.getZ()+0.5, player.getYaw(), player.getPitch());
+		if (stage == null) {
+			copyPositionAndRotation(player);
+			return;
+		}
+		if (SongPlayer.rotate) {
+			refreshPositionAndAngles(stage.position.getX() + 0.5, stage.position.getY(), stage.position.getZ() + 0.5, Util.yaw, Util.pitch);
+			headYaw = Util.yaw;
+			bodyYaw = Util.yaw;
+		} else {
+			refreshPositionAndAngles(stage.position.getX() + 0.5, stage.position.getY(), stage.position.getZ() + 0.5, player.getYaw(), player.getPitch());
 			headYaw = player.headYaw;
 			bodyYaw = player.bodyYaw;
-		}
-		else {
-			copyPositionAndRotation(player);
 		}
 	}
 }

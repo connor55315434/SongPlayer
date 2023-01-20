@@ -5,18 +5,19 @@ import java.util.stream.Collectors;
 
 import com.github.hhhzzzsss.songplayer.SongPlayer;
 
+import com.github.hhhzzzsss.songplayer.Util;
 import com.github.hhhzzzsss.songplayer.song.Song;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.EntityPose;
+import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
 public class Stage {
 	private final ClientPlayerEntity player = SongPlayer.MC.player;
 	
-	public BlockPos position;
+	public static BlockPos position;
 //	public BlockPos[] tunedNoteblocks = new BlockPos[400];
 	public HashMap<Integer, BlockPos> noteblockPositions = new HashMap<>();
 	public boolean rebuild = false;
@@ -30,13 +31,40 @@ public class Stage {
 	}
 	
 	public void movePlayerToStagePosition() {
-		player.getAbilities().allowFlying = true;
-		player.getAbilities().flying = true;
+		if (SongHandler.getInstance().stage == null || SongPlayer.useCommandsForPlaying) {
+			return;
+		}
 		player.refreshPositionAndAngles(position.getX() + 0.5, position.getY() + 0.0, position.getZ() + 0.5, player.getYaw(), player.getPitch());
 		player.setVelocity(Vec3d.ZERO);
 	}
 
+	public void movePlayerToStagePosition(Boolean force, Boolean enableFlight) {
+		if (!force) { //check if moving the player to the stage is needed unless strictly told otherwise by the force argument
+			if (SongPlayer.useCommandsForPlaying) {
+				return;
+			}
+			if (SongHandler.getInstance().stage == null) {
+				return;
+			}
+			if (!Util.currentPlaylist.isEmpty() || !SongHandler.getInstance().songQueue.isEmpty()) {
+				return;
+			}
+		}
+		//send packet to ensure player is forced at the center of the stage. will fail if there is a boat or block in the way.
+		PlayerMoveC2SPacket moveToStagePacket = new PlayerMoveC2SPacket.PositionAndOnGround(position.getX() + 0.5, position.getY() + 0.0, position.getZ() + 0.5, true);
+		SongPlayer.MC.getNetworkHandler().sendPacket(moveToStagePacket);
+		player.refreshPositionAndAngles(position.getX() + 0.5, position.getY() + 0.0, position.getZ() + 0.5, player.getYaw(), player.getPitch());
+		player.setVelocity(Vec3d.ZERO);
+		if (enableFlight) {
+			Util.enableFlightIfNeeded();
+		}
+	}
+
 	public void checkBuildStatus(Song song) {
+		if (SongPlayer.useCommandsForPlaying) {
+			return;
+		}
+
 		noteblockPositions.clear();
 		missingNotes.clear();
 
@@ -122,12 +150,10 @@ public class Stage {
 				if (missingNotes.contains(noteId)) {
 					missingNotes.remove(noteId);
 					noteblockPositions.put(noteId, nbPos);
-				}
-				else {
+				} else {
 					unusedNoteblockLocations.add(nbPos);
 				}
-			}
-			else {
+			} else {
 				unusedNoteblockLocations.add(nbPos);
 			}
 		}

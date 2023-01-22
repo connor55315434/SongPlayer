@@ -100,7 +100,7 @@ public class CommandProcessor {
 
 		@Override
 		public String getSyntax() {
-			return SongPlayer.prefix + "setCommand <survival, creative, playnote, displaytime> <command>";
+			return SongPlayer.prefix + "setCommand <survival, creative, playnote, displayprogress> <command>";
 		}
 
 		@Override

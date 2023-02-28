@@ -30,7 +30,9 @@ Plays a particular midi from the .minecraft/songs folder, or, if a url is specif
 
 If there is a song already playing, the new song will be added to the queue.
 
-### $playlist \<create, delete, play> <playlist name> OR: $playlist \<sort> <addedfirst, alphabetically, shuffle> OR: $playlist \<edit> \<playlist name> \<add, remove> \<song>
+### $playlist \<create, delete, play> <playlist name>
+OR: $playlist \<sort> <addedfirst, alphabetically, shuffle>
+OR: $playlist \<edit> \<playlist name> \<add, remove> \<song>
 Manage or play a list of songs
 
 ### $setPlayMode \<client, commands, gamemode>
@@ -152,9 +154,9 @@ This is nice if you want to test out song files before playing them for everyone
   - $setStage
   - $setPlayMode (replaces $toggle useCommandsToPlay)
 - Added new stage layouts when switching gamemode to play:
-    - default (11x10x11 stage, fits 353 noteblocks)
-    - compact (11x11x11 stage, fits 400 noteblocks)
-    - legacy (9x8x9 stage, fits 300 noteblocks - Not new, used in older versions of SongPlayer)
+  - default (11x10x11 stage, fits 353 noteblocks)
+  - compact (11x11x11 stage, fits 400 noteblocks)
+  - legacy (9x8x9 stage, fits 300 noteblocks - Not new, used in older versions of SongPlayer)
 - Added support for playing songs client-side
 - Command prefix can no longer be manually changed to begin with a / character
 - Fixed a bug where powering noteblocks with redstone could cause infinite building loops, or have the note's pitch off by 1

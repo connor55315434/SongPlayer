@@ -71,17 +71,15 @@ public class Song {
 	public boolean reachedNextNote() {
 		if (position < notes.size()) {
 			return notes.get(position).time <= time;
-		} else {
-			if (time > length && shouldLoop()) {
-				loop();
-				if (position < notes.size()) {
-					return notes.get(position).time <= time;
-				} else {
-					return false;
-				}
-			} else {
-				return false;
+		}
+		if (time > length && shouldLoop()) {
+			loop();
+			if (position < notes.size()) {
+				return notes.get(position).time <= time;
 			}
+			return false;
+		} else {
+			return false;
 		}
 	}
 

@@ -12,6 +12,9 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.c2s.play.CreativeInventoryActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvent;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -21,6 +24,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameMode;
+import net.minecraft.world.World;
 
 import java.io.File;
 import java.io.IOException;
@@ -73,7 +77,7 @@ public class SongHandler {
             stage = new Stage();
             stage.movePlayerToStagePosition();
         }
-        if (SongPlayer.showFakePlayer && SongPlayer.fakePlayer == null && !SongPlayer.useCommandsForPlaying) {
+        if (SongPlayer.showFakePlayer && SongPlayer.fakePlayer == null && SongPlayer.switchGamemode) {
             SongPlayer.fakePlayer = new FakePlayerEntity();
             SongPlayer.fakePlayer.copyStagePosAndPlayerLook();
         }
@@ -81,10 +85,10 @@ public class SongHandler {
             SongPlayer.removeFakePlayer();
         }
         checkCommandCache();
-        if (!SongPlayer.useCommandsForPlaying) {
+        if (SongPlayer.switchGamemode) {
             SongPlayer.MC.player.getAbilities().allowFlying = true;
         }
-        if (building && !SongPlayer.useCommandsForPlaying) {
+        if (building && SongPlayer.switchGamemode) {
             if (tick) {
                 handleBuilding();
             }
@@ -112,15 +116,16 @@ public class SongHandler {
 
     public void setSong(Song song) {
         currentSong = song;
-        if (SongPlayer.useCommandsForPlaying) {
+        if (SongPlayer.useCommandsForPlaying || !SongPlayer.switchGamemode) {
             building = false;
             return;
         }
         building = true;
         setCreativeIfNeeded();
-        //if (stage != null) {
-        //    stage.movePlayerToStagePosition();
-        //}
+
+        if (stage != null) {
+            stage.movePlayerToStagePosition(true, false, true);
+        }
         SongPlayer.addChatMessage("§6Building noteblocks");
     }
 
@@ -139,6 +144,7 @@ public class SongHandler {
     private int buildStartDelay = 0;
     private int buildEndDelay = 0;
     private int buildCooldown = 0;
+    private int updatePlayerPosCooldown = 0;
     private void handleBuilding() {
         //if (SongPlayer.useCommandsForPlaying) {
         //    return;
@@ -151,6 +157,11 @@ public class SongHandler {
         if (buildCooldown > 0) {
             buildCooldown--;
             return;
+        }
+        if (!SongPlayer.useCommandsForPlaying && !SongPlayer.switchGamemode) {
+            if (updatePlayerPosCooldown > 0) {
+                updatePlayerPosCooldown--;
+            }
         }
         ClientWorld world = SongPlayer.MC.world;
         if (SongPlayer.MC.interactionManager.getCurrentGameMode() != GameMode.CREATIVE) {
@@ -195,6 +206,7 @@ public class SongHandler {
             SongPlayer.addChatMessage("§6Now playing §3" + currentSong.name);
             return;
         }
+        //rebuilding?
 
         int desiredNoteId = stage.missingNotes.pollFirst();
         BlockPos bp = stage.noteblockPositions.get(desiredNoteId);
@@ -202,6 +214,9 @@ public class SongHandler {
             return;
         }
         int blockId = Block.getRawIdFromState(world.getBlockState(bp));
+        if (blockId % 2 == 1) {
+            blockId += 1;
+        }
         int currentNoteId = (blockId-SongPlayer.NOTEBLOCK_BASE_ID)/2;
         if (currentNoteId != desiredNoteId) {
             holdNoteblock(desiredNoteId);
@@ -226,14 +241,14 @@ public class SongHandler {
             setPlayProgressDisplay();
         }
 
-        if (!SongPlayer.useCommandsForPlaying) {
+        if (SongPlayer.switchGamemode) {
             if (SongPlayer.MC.interactionManager.getCurrentGameMode() != GameMode.SURVIVAL) {
                 currentSong.pause();
                 return;
             }
         }
 
-        if (tick && !SongPlayer.useCommandsForPlaying) {
+        if (tick && SongPlayer.switchGamemode) {
             if (stage.hasBreakingModification()) {
                 stage.checkBuildStatus(currentSong);
             }
@@ -269,8 +284,16 @@ public class SongHandler {
         if (player.isCreative() || player.isSpectator()) {
             setSurvivalIfNeeded();
         }
+        if (updatePlayerPosCooldown < 1) {
+            updatePlayerPosCooldown = 10;
+            Util.playerPosX = player.getX();
+            Util.playerPosZ = player.getZ();
+        }
+        SoundEvent[] soundlist = {SoundEvents.BLOCK_NOTE_BLOCK_HARP.value(), SoundEvents.BLOCK_NOTE_BLOCK_BASEDRUM.value(), SoundEvents.BLOCK_NOTE_BLOCK_SNARE.value(), SoundEvents.BLOCK_NOTE_BLOCK_HAT.value(), SoundEvents.BLOCK_NOTE_BLOCK_BASS.value(), SoundEvents.BLOCK_NOTE_BLOCK_FLUTE.value(), SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundEvents.BLOCK_NOTE_BLOCK_GUITAR.value(), SoundEvents.BLOCK_NOTE_BLOCK_CHIME.value(), SoundEvents.BLOCK_NOTE_BLOCK_XYLOPHONE.value(), SoundEvents.BLOCK_NOTE_BLOCK_IRON_XYLOPHONE.value(), SoundEvents.BLOCK_NOTE_BLOCK_COW_BELL.value(), SoundEvents.BLOCK_NOTE_BLOCK_DIDGERIDOO.value(), SoundEvents.BLOCK_NOTE_BLOCK_BIT.value(), SoundEvents.BLOCK_NOTE_BLOCK_BANJO.value(), SoundEvents.BLOCK_NOTE_BLOCK_PLING.value()};
+        World world = SongPlayer.MC.player.world;
         while (currentSong.reachedNextNote()) {
             Note note = currentSong.getNextNote();
+
             if (SongPlayer.useCommandsForPlaying) {
                 String[] instrumentNames = {"harp", "basedrum", "snare", "hat", "bass", "flute", "bell", "guitar", "chime", "xylophone", "iron_xylophone", "cow_bell", "didgeridoo", "bit", "banjo", "pling"};
                 int instrument = note.noteId / 25;
@@ -281,16 +304,20 @@ public class SongHandler {
                 String command = SongPlayer.playSoundCommand.replace("{type}", instrumentNames[instrument]).replace("{volume}", "1").replace("{pitch}", Double.toString(pitch));
                 SongPlayer.MC.getNetworkHandler().sendCommand(command);
                 somethingPlayed = true;
-            } else {
+            } else if (SongPlayer.switchGamemode) {
                 BlockPos bp = stage.noteblockPositions.get(note.noteId);
                 if (bp != null) {
                     attackBlock(bp);
                     somethingPlayed = true;
                 }
+            } else { //play client-side
+                //player.playSound(soundlist[note.noteId / 25], SoundCategory.RECORDS, 1F, (float) SongPlayer.pitchGlobal[(note.noteId % 25)]);
+
+                world.playSound(Util.playerPosX, 10000000, Util.playerPosZ, soundlist[note.noteId / 25], SoundCategory.BLOCKS, 30000000.0F, (float) SongPlayer.pitchGlobal[(note.noteId % 25)], false);
             }
         }
 
-        if (somethingPlayed && !SongPlayer.useCommandsForPlaying) {
+        if (somethingPlayed && !SongPlayer.useCommandsForPlaying && SongPlayer.switchGamemode) {
             stopAttack();
         }
 
@@ -377,7 +404,7 @@ public class SongHandler {
     }
     private void setCreativeIfNeeded() {
         cachedCommand = null;
-        if (SongPlayer.useCommandsForPlaying) {
+        if (SongPlayer.useCommandsForPlaying || !SongPlayer.switchGamemode) {
             return;
         }
         if (SongPlayer.MC.interactionManager.getCurrentGameMode() != GameMode.CREATIVE) {
@@ -386,7 +413,7 @@ public class SongHandler {
     }
     private void setSurvivalIfNeeded() {
         cachedCommand = null;
-        if (SongPlayer.useCommandsForPlaying) {
+        if (SongPlayer.useCommandsForPlaying || !SongPlayer.switchGamemode) {
             return;
         }
         if (oldItemHeld != null) {
@@ -437,7 +464,7 @@ public class SongHandler {
             }
         }
         if (SongPlayer.rotate) {
-            float[] pitchandyaw = Util.setAngleAtBlock(bp);
+            float[] pitchandyaw = Util.getAngleAtBlock(bp);
             PlayerMoveC2SPacket packet = new PlayerMoveC2SPacket.LookAndOnGround(pitchandyaw[1], pitchandyaw[0], true);
             SongPlayer.MC.player.networkHandler.sendPacket(packet);
         }
@@ -458,7 +485,7 @@ public class SongHandler {
             }
         }
         if (SongPlayer.rotate) {
-            float[] pitchandyaw = Util.setAngleAtBlock(bp);
+            float[] pitchandyaw = Util.getAngleAtBlock(bp);
             PlayerMoveC2SPacket packet = new PlayerMoveC2SPacket.LookAndOnGround(pitchandyaw[1], pitchandyaw[0], true);
             player.networkHandler.sendPacket(packet);
         }

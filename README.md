@@ -30,20 +30,34 @@ Plays a particular midi from the .minecraft/songs folder, or, if a url is specif
 
 If there is a song already playing, the new song will be added to the queue.
 
-### $playlist \<create, delete, play> \<playlist name>
-### OR: $playlist \<sort> <addedfirst, alphabetically, shuffle>
-### OR: $playlist \<edit> \<playlist name> \<add, remove> \<song>
+### $playlist \<create, delete, play> <playlist name> OR: $playlist \<sort> <addedfirst, alphabetically, shuffle> OR: $playlist \<edit> \<playlist name> \<add, remove> \<song>
 Manage or play a list of songs
+
+### $setPlayMode \<client, commands, gamemode>
+*$aliases: `$playMode`, `$pMode`, `$updatePlayMode`*
+
+Change what method to use when playing songs.
+- client: plays your songs client-side, so no one else can hear them.
+- gamemode: switches to creative to automatically build & repair noteblocks, then back to survival to play them.
+- commands: Use commands to play songs instead of noteblocks
+
+### $setStage <default, legacy, compact>
+*$aliases: `$stage`, `$updateStage`*
+
+Changes the shape of the stage when automatically building noteblocks.
+- default: a 11x10x11 stage. Contains 353 noteblocks in total.
+- compact: a 11x11x11 stage. Contains all 400 possible noteblocks, and is more of a circular shape. Huge thanks to Lizard16 for making this design!
+- legacy: a 9x8x9 stage. Contains 300 noteblocks in total. (This is the stage that the original SongPlayer mod uses)
 
 ### $prefix <prefix>
 Sets the command prefix used to execute these commands.
 Example: `$prefix !` will change commands to `!example command` instead of `$example command`
 
-### $toggle \<swing, rotate, useCommandsToPlay> \<false, true>
+### $toggle <swing, rotate, allMovements> <true, false>
 Toggles certain features I added as ideas when forking this. All are toggled to false by default.
 - Swing: weather you swing your hand when you play a noteblock
 - Rotate: weather you rotate to the noteblock you are placing / playing
-- useCommandsToPlay: weather you should use commands to play instead of noteblocks
+- allMovements: toggles all movement-related features at once such as swing and rotate
 
 ### $stop
 Stops playing/building and clears the queue or playlist.
@@ -87,7 +101,7 @@ For example, if the server uses vanilla commands, do `$setCreativeCommand /gamem
 Shortcut for `$setCommand survival`
 For example, if the server uses vanilla commands, do `$setSurvivalCommand /gamemode survival`.
 
-### $useVanillaCommands
+### $useEssentialsCommands
 *aliases: `$essentials`, `$useEssentials`, `$essentialsCommands`*
 
 Switch to using Essentials gamemode commands.
@@ -112,16 +126,56 @@ It plays every single noteblock sound possible in order.
 However, there are 400 possible noteblocks but the max stage size is 300, so that last 100 notes aren't played.
 
 # Mechanism
-### --- using noteblocks ---
+--- using noteblocks ---
 SongPlayer places noteblocks with nbt and instrument data already in them, so the noteblocks do not need to be individually tuned. Ayunami2000 has previously done a proof-of-concept of this method.
 
 My client will automatically detect what noteblocks are needed and place them automatically before each song is played, which makes playing songs quite easy. The only drawback is that you need to be able to switch between creative and survival mode, which my client will attempt to do automatically.
 
 When playing a song, freecam is enabled. You will be able to move around freely, but in reality you are only moving your camera while your player stays at the center of the noteblocks. This is because noteblocks can only be played if you're within reach distance of them, so you have to stand at the center of the noteblocks to play them, but it's still nice to be able to move around while your song is playing.
 
-### --- using commands ---
-SongPlayer will use commands such as /execute and display progress for everyone with /title by default.
+--- using commands ---
+SongPlayer will use commands such as /playsound and display progress for everyone with /title by default.
 
-This will only work if you have op on a minecraft server, and some servers may kick you for spamming.
+This will only work if you have /op on a minecraft server, and some servers may kick you for spamming.
 
 Use this mode with caution.
+
+--- using client ---
+SongPlayer will read the song file and play it on your game. No one else can hear the songs besides you. However, you do not need any permissions on the server to use this.
+
+This is nice if you want to test out song files before playing them for everyone else, or if you just want to enjoy your songs without any interruptions of other players.
+
+# --- CHANGELOGS ---
+### 3.1.0
+```
+- added new commands:
+  - $setStage
+  - $setPlayMode (replaces $toggle useCommandsToPlay)
+- Added new stage layouts when switching gamemode to play:
+    - default (11x10x11 stage, fits 353 noteblocks)
+    - compact (11x11x11 stage, fits 400 noteblocks)
+    - legacy (9x8x9 stage, fits 300 noteblocks - Not new, used in older versions of SongPlayer)
+- Added support for playing songs client-side
+- Command prefix can no longer be manually changed to begin with a / character
+- Fixed a bug where powering noteblocks with redstone could cause infinite building loops, or have the note's pitch off by 1
+- Fixed a crash when interacting with an entity while playing
+- Fixed a bug where players could change noteblock types without the mod fixing it when using gamemode method of playing noteblocks
+- Fixed an issue where the mod sometimes wouldn't detect blocks above noteblocks, and won't fix them, causing the noteblocks to not be played
+- You no longer show sprinting particles from other players while playing
+```
+
+### 3.0.0
+```
+- added new commands:
+  - $prefix
+  - $toggle
+  - $playlist
+- SongPlayer will now attempt to restore what item you were holding before you started building, after it's finished building.
+- Added support to change your command prefix
+- Added support to rotate and swing your hand to the target noteblock while playing
+- Added playlist support
+- Added a way to use commands to play instead of noteblocks that can be played for the entire server. ($toggle useCommandsToPlay true, REQUIRES /OP)
+- Added support for 1.19.3
+- Added config file support, so the mod will remember your settings.
+- You no longer teleport back to the stage when there's more songs in queue.
+```

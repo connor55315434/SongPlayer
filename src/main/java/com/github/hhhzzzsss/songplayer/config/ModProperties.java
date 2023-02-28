@@ -54,8 +54,7 @@ public class ModProperties {
             createValue("creativeCommand", "gamemode creative");
             createValue("survivalCommand", "gamemode survival");
             createValue("playSoundCommand", "execute at @a run playsound minecraft:block.note_block.{type} player @p ~ ~300000000 ~ 3000000000 {pitch} 1");
-            createValue("commandBeforePlaying", "gamerule sendCommandFeedback false");
-            createValue("commandAfterPlaying", "gamerule sendCommandFeedback true");
+            createValue("stageType", "default");
             createValue("showProgressCommand", "title @a actionbar [" +
                     "{\"color\":\"gold\",\"text\":\"Now playing \"}," +
                     "{\"color\":\"blue\",\"text\":\"{MIDI}\"}," +
@@ -64,6 +63,7 @@ public class ModProperties {
             createValue("rotate", String.valueOf(false));
             createValue("swing", String.valueOf(false));
             createValue("useCommandsForPlaying", String.valueOf(false));
+            createValue("switchGamemode", String.valueOf(true));
             save();
         } catch (IOException e) {
             e.printStackTrace();

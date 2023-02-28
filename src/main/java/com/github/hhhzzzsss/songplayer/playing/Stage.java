@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import com.github.hhhzzzsss.songplayer.SongPlayer;
 
 import com.github.hhhzzzsss.songplayer.Util;
+import com.github.hhhzzzsss.songplayer.config.ModProperties;
 import com.github.hhhzzzsss.songplayer.song.Song;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -31,14 +32,16 @@ public class Stage {
 	}
 	
 	public void movePlayerToStagePosition() {
-		if (SongHandler.getInstance().stage == null || SongPlayer.useCommandsForPlaying) {
+		if (SongHandler.getInstance().stage == null || SongPlayer.useCommandsForPlaying || !SongPlayer.switchGamemode) {
 			return;
 		}
+		PlayerMoveC2SPacket moveToStagePacket = new PlayerMoveC2SPacket.PositionAndOnGround(position.getX() + 0.5, position.getY() + 0.0, position.getZ() + 0.5, true);
+		SongPlayer.MC.getNetworkHandler().sendPacket(moveToStagePacket);
 		player.refreshPositionAndAngles(position.getX() + 0.5, position.getY() + 0.0, position.getZ() + 0.5, player.getYaw(), player.getPitch());
 		player.setVelocity(Vec3d.ZERO);
 	}
 
-	public void movePlayerToStagePosition(Boolean force, Boolean enableFlight) {
+	public void movePlayerToStagePosition(Boolean force, Boolean enableFlight, Boolean onlyPacket) {
 		if (!force) { //check if moving the player to the stage is needed unless strictly told otherwise by the force argument
 			if (SongPlayer.useCommandsForPlaying) {
 				return;
@@ -46,22 +49,24 @@ public class Stage {
 			if (SongHandler.getInstance().stage == null) {
 				return;
 			}
-			if (!Util.currentPlaylist.isEmpty() || !SongHandler.getInstance().songQueue.isEmpty()) {
+			if (!Util.currentPlaylist.isEmpty() && !SongHandler.getInstance().songQueue.isEmpty() && SongHandler.getInstance().currentSong == null) {
 				return;
 			}
 		}
 		//send packet to ensure player is forced at the center of the stage. will fail if there is a boat or block in the way.
 		PlayerMoveC2SPacket moveToStagePacket = new PlayerMoveC2SPacket.PositionAndOnGround(position.getX() + 0.5, position.getY() + 0.0, position.getZ() + 0.5, true);
 		SongPlayer.MC.getNetworkHandler().sendPacket(moveToStagePacket);
-		player.refreshPositionAndAngles(position.getX() + 0.5, position.getY() + 0.0, position.getZ() + 0.5, player.getYaw(), player.getPitch());
-		player.setVelocity(Vec3d.ZERO);
+		if (!onlyPacket) {
+			player.refreshPositionAndAngles(position.getX() + 0.5, position.getY() + 0.0, position.getZ() + 0.5, player.getYaw(), player.getPitch());
+			player.setVelocity(Vec3d.ZERO);
+		}
 		if (enableFlight) {
 			Util.enableFlightIfNeeded();
 		}
 	}
 
 	public void checkBuildStatus(Song song) {
-		if (SongPlayer.useCommandsForPlaying) {
+		if (!SongPlayer.switchGamemode) {
 			return;
 		}
 
@@ -77,30 +82,245 @@ public class Stage {
 
 		ArrayList<BlockPos> noteblockLocations = new ArrayList<>();
 		ArrayList<BlockPos> breakLocations = new ArrayList<>();
-		for (int dx = -4; dx <= 4; dx++) {
-			for (int dz = -4; dz <= 4; dz++) {
-				if (Math.abs(dx) == 4 && Math.abs(dz) == 4)  {
-					noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + 0, position.getZ() + dz));
-					noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + 2, position.getZ() + dz));
-					breakLocations.add(new BlockPos(position.getX() + dx, position.getY() + 1, position.getZ() + dz));
-					breakLocations.add(new BlockPos(position.getX() + dx, position.getY() + 3, position.getZ() + dz));
-				} else {
-					noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() - 1, position.getZ() + dz));
-					noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + 2, position.getZ() + dz));
-					breakLocations.add(new BlockPos(position.getX() + dx, position.getY() + 0, position.getZ() + dz));
-					breakLocations.add(new BlockPos(position.getX() + dx, position.getY() + 1, position.getZ() + dz));
-					breakLocations.add(new BlockPos(position.getX() + dx, position.getY() + 3, position.getZ() + dz));
+		switch(SongPlayer.stageType) {
+			case "compact": {
+				int[] yLayers = {-4, -2, -1, 0, 1, 2, 3, 4, 5, 6};
+				//UGH
+
+				for (int dx = -5; dx <= 5; dx++) {
+					for (int dz = -5; dz <= 5; dz++) {
+						for (int dy : yLayers) {
+							int adx = Math.abs(dx);
+							int adz = Math.abs(dz);
+							switch(dy) {
+								case -4: {
+									if (adx < 3 && adz < 3) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									if ((adx == 3 ^ adz == 3) && (adx == 0 ^ adz == 0)) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									break;
+								}
+								case -2: { //also takes care of -3
+									if (adz == 0 && adx == 0) { //prevents placing int the center
+										break;
+									}
+									if (adz * adx > 9) { //prevents building out too far
+										break;
+									}
+									if (adz + adx == 5 && adx != 0 && adz != 0) {
+										//add noteblocks above and below here
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy + 1, position.getZ() + dz));
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy - 1, position.getZ() + dz));
+										break;
+									}
+									if (adz * adx == 3) {
+										//add noteblocks above and below here
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy + 1, position.getZ() + dz));
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy - 1, position.getZ() + dz));
+										break;
+									}
+									if (adx < 3 && adz < 3 && adx + adz > 0) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										breakLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy + 2, position.getZ() + dz));
+										break;
+									}
+									if (adz == 0 ^ adx == 0) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										breakLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy + 2, position.getZ() + dz));
+										break;
+									}
+									if (adz * adx == 10) { //expecting one to be 2, and one to be 5.
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										breakLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy + 2, position.getZ() + dz));
+										break;
+									}
+									if (adz + adx == 6) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										if (adx == 5 ^ adz == 5) {
+											breakLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy + 2, position.getZ() + dz));
+										}
+										break;
+									}
+									break;
+								}
+								case -1: {
+									if (adx + adz == 7 || adx + adz == 0) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									break;
+								}
+								case 0: {
+									int check = adx + adz;
+									if ((check == 8 || check == 6) && adx * adz > 5) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									break;
+								}
+								case 1: {
+									int addl1 = adx + adz;
+									if (addl1 == 7 || addl1 == 3 || addl1 == 2) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									if (adx == 5 ^ adz == 5 && addl1 < 7) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									if (addl1 == 4 && adx * adz != 0) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									if (adx + adz < 7) {
+										breakLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									break;
+								}
+								case 2: {
+									int addl2 = adx + adz;
+									if (adx == 5 || adz == 5) {
+										break;
+									}
+									if (addl2 == 8 || addl2 == 6 || addl2 == 5 || addl2 == 1) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									if ((addl2 == 4) && (adx == 0 ^ adz == 0)) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									if (addl2 == 0) {
+										breakLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									break;
+								}
+								case 3: {
+									if (adx * adz == 12 || adx + adz == 0) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									if ((adx == 5 ^ adz == 5) && (adx < 2 ^ adz < 2)) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									if (adx > 3 || adz > 3) { //don't allow any more checks passed 3 blocks out
+										break;
+									}
+									if (adx + adz > 1 && adx + adz < 5) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									break;
+								}
+								case 4: {
+									if (adx == 5 || adz == 5) {
+										break;
+									}
+									if (adx + adz == 4 && adx * adz == 0) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									int addl4 = adx + adz;
+									if (addl4 == 1 || addl4 == 5 || addl4 == 6) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									break;
+								}
+								case 5: {
+									if (adx > 3 || adz > 3) {
+										break;
+									}
+									int addl5 = adx + adz;
+									if (addl5 > 1 && addl5 < 5) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									break;
+								}
+								case 6: {
+									if (adx + adz < 2) {
+										noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + dy, position.getZ() + dz));
+										break;
+									}
+									break;
+								}
+							}
+							//all breaks lead here
+						}
+					}
 				}
+
+				break;
 			}
-		}
-		for (int dx = -4; dx <= 4; dx++) {
-			for (int dz = -4; dz <= 4; dz++) {
-				if (withinBreakingDist(dx, -3, dz)) {
-					noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() - 3, position.getZ() + dz));
+			case "default": {
+				for (int dx = -5; dx <= 5; dx++) {
+					for (int dz = -5; dz <= 5; dz++) {
+						if (((Math.abs(dx) == 4 && Math.abs(dz) == 4) || (Math.abs(dx) == 5 && Math.abs(dz) == 3) || (Math.abs(dx) == 3) && Math.abs(dz) == 5)) {
+							noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + 0, position.getZ() + dz));
+							noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + 2, position.getZ() + dz));
+						} else if (Math.abs(dx) >= 4 && Math.abs(dz) >= 4) { //don't add it
+						} else {
+							noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() - 1, position.getZ() + dz));
+							noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + 2, position.getZ() + dz));
+							breakLocations.add(new BlockPos(position.getX() + dx, position.getY() + 1, position.getZ() + dz));
+						}
+					}
 				}
-				if (withinBreakingDist(dx, 4, dz)) {
-					noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + 4, position.getZ() + dz));
+				for (int dx = -4; dx <= 4; dx++) {
+					for (int dz = -4; dz <= 4; dz++) {
+						if (withinBreakingDist(dx, -3, dz)) {
+							noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() - 3, position.getZ() + dz));
+						}
+						if (withinBreakingDist(dx, 4, dz) && Math.abs(dx) + Math.abs(dz) != 7) {
+							noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + 4, position.getZ() + dz));
+						}
+					}
 				}
+				for (int dx = -1; dx <= 1; dx++) {
+					for (int dz = -1; dz <= 1; dz++) {
+						if (Math.abs(dz) + Math.abs(dx) < 2) {
+							noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + 6, position.getZ() + dz));
+						}
+					}
+				}
+				break;
+			}
+			case "legacy": {
+				for (int dx = -4; dx <= 4; dx++) {
+					for (int dz = -4; dz <= 4; dz++) {
+						if (Math.abs(dx) == 4 && Math.abs(dz) == 4)  {
+							noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + 0, position.getZ() + dz));
+							noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + 2, position.getZ() + dz));
+						} else {
+							noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() - 1, position.getZ() + dz));
+							noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + 2, position.getZ() + dz));
+							breakLocations.add(new BlockPos(position.getX() + dx, position.getY() + 1, position.getZ() + dz));
+						}
+					}
+				}
+				for (int dx = -4; dx <= 4; dx++) {
+					for (int dz = -4; dz <= 4; dz++) {
+						if (withinBreakingDist(dx, -3, dz)) {
+							noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() - 3, position.getZ() + dz));
+						}
+						if (withinBreakingDist(dx, 4, dz)) {
+							noteblockLocations.add(new BlockPos(position.getX() + dx, position.getY() + 4, position.getZ() + dz));
+						}
+					}
+				}
+				break;
+			}
+			default: {
+				ModProperties.getInstance().updateValue("stageType", "default");
+				Util.updateValuesToConfig();
 			}
 		}
 
@@ -140,12 +360,19 @@ public class Stage {
 			}
 		});
 
+		for (BlockPos e : noteblockLocations) {
+			breakLocations.add(e.add(0, 1, 0));
+		}
+
 		// Remove already-existing notes from missingNotes, adding their positions to noteblockPositions, and create a list of unused noteblock locations
 		ArrayList<BlockPos> unusedNoteblockLocations = new ArrayList<>();
 		for (BlockPos nbPos : noteblockLocations) {
 			BlockState bs = SongPlayer.MC.world.getBlockState(nbPos);
 			int blockId = Block.getRawIdFromState(bs);
 			if (blockId >= SongPlayer.NOTEBLOCK_BASE_ID && blockId < SongPlayer.NOTEBLOCK_BASE_ID+800) {
+				if (blockId % 2 == 1) {
+					blockId += 1;
+				}
 				int noteId = (blockId-SongPlayer.NOTEBLOCK_BASE_ID)/2;
 				if (missingNotes.contains(noteId)) {
 					missingNotes.remove(noteId);
@@ -229,12 +456,16 @@ public class Stage {
 		return requiredBreaks.isEmpty() && missingNotes.isEmpty();
 	}
 
-	private static final int WRONG_INSTRUMENT_TOLERANCE = 3;
+	//for survival: private static final int WRONG_INSTRUMENT_TOLERANCE = 3;
+	private static final int WRONG_INSTRUMENT_TOLERANCE = 0;
 	public boolean hasBreakingModification() {
 		int wrongInstruments = 0;
 		for (Map.Entry<Integer, BlockPos> entry : noteblockPositions.entrySet()) {
 			BlockState bs = SongPlayer.MC.world.getBlockState(entry.getValue());
 			int blockId = Block.getRawIdFromState(bs);
+			if (blockId % 2 == 1) {
+				blockId += 1;
+			}
 			int actualNoteId = (blockId-SongPlayer.NOTEBLOCK_BASE_ID)/2;
 			if (actualNoteId < 0 || actualNoteId >= 400) {
 				return true;
@@ -246,12 +477,13 @@ public class Stage {
 			if (targetPitch != actualPtich) {
 				return true;
 			}
+			/* WHY WAS THIS A THING?????? At least I can have fun messing with other player's stages when they play if they dont use my fork lol
 			if (targetInstrument != actualInstrument) {
 				wrongInstruments++;
 				if (wrongInstruments > WRONG_INSTRUMENT_TOLERANCE) {
 					return true;
 				}
-			}
+			}*/
 
 			BlockState aboveBs = SongPlayer.MC.world.getBlockState(entry.getValue().up());
 			if (!aboveBs.isAir() && !aboveBs.getMaterial().isLiquid()) {

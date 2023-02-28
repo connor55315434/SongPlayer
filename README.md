@@ -31,8 +31,8 @@ Plays a particular midi from the .minecraft/songs folder, or, if a url is specif
 If there is a song already playing, the new song will be added to the queue.
 
 ### $playlist \<create, delete, play> <playlist name>
-OR: $playlist \<sort> <addedfirst, alphabetically, shuffle>
-OR: $playlist \<edit> \<playlist name> \<add, remove> \<song>
+### OR: $playlist \<sort> <addedfirst, alphabetically, shuffle>
+### OR: $playlist \<edit> \<playlist name> \<add, remove> \<song>
 Manage or play a list of songs
 
 ### $setPlayMode \<client, commands, gamemode>

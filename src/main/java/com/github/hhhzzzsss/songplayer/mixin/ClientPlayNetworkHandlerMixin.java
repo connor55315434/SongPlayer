@@ -5,19 +5,10 @@ import com.github.hhhzzzsss.songplayer.FakePlayerEntity;
 import com.github.hhhzzzsss.songplayer.Util;
 import com.github.hhhzzzsss.songplayer.playing.SongHandler;
 import com.github.hhhzzzsss.songplayer.playing.Stage;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Material;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ServerInfo;
-import net.minecraft.entity.Entity;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.play.*;
-import net.minecraft.network.packet.s2c.play.BlockBreakingProgressS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerRespawnS2CPacket;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -29,7 +20,6 @@ import com.github.hhhzzzsss.songplayer.SongPlayer;
 
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.network.ClientConnection;
-import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
 
 @Mixin(ClientPlayNetworkHandler.class)
@@ -42,8 +32,9 @@ public abstract class ClientPlayNetworkHandlerMixin {
 	public ClientPlayNetworkHandlerMixin() {
 		connection = null;
 	}
-	
-	@Inject(at = @At("HEAD"), method = "sendPacket(Lnet/minecraft/network/Packet;)V", cancellable = true)
+
+
+	@Inject(at = @At("HEAD"), method = "sendPacket(Lnet/minecraft/network/packet/Packet;)V", cancellable = true)
 	private void onSendPacket(Packet<?> packet, CallbackInfo ci) {
 		Stage stage = SongHandler.getInstance().stage;
 		//check if any packets need to be messed with before proceeding

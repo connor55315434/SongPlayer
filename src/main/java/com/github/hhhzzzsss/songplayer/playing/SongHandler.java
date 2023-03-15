@@ -5,9 +5,13 @@ import com.github.hhhzzzsss.songplayer.SongPlayer;
 import com.github.hhhzzzsss.songplayer.Util;
 import com.github.hhhzzzsss.songplayer.song.*;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Material;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.fluid.Fluid;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.packet.c2s.play.CreativeInventoryActionC2SPacket;
@@ -30,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.LinkedList;
+import java.util.Objects;
 
 public class SongHandler {
     public static ItemStack oldItemHeld = null;
@@ -64,18 +69,22 @@ public class SongHandler {
         }
 
         if (currentSong == null) {
-            if (stage != null || SongPlayer.fakePlayer != null) {
-                if (stage != null) {
-                    stage.movePlayerToStagePosition();
+            if (songQueue.isEmpty() && Util.playlistSongs.isEmpty()) {
+                if (stage != null || SongPlayer.fakePlayer != null) {
+                    if (stage != null) {
+                        stage.movePlayerToStagePosition(false, false, false);
+                    }
+                    cleanup(false);
                 }
-                cleanup(false);
             }
             return;
         }
 
         if (stage == null) {
             stage = new Stage();
-            stage.movePlayerToStagePosition();
+            if (songQueue.isEmpty() && Util.playlistSongs.isEmpty()) {
+                stage.movePlayerToStagePosition(false, false, false);
+            }
         }
         if (SongPlayer.showFakePlayer && SongPlayer.fakePlayer == null && SongPlayer.switchGamemode) {
             SongPlayer.fakePlayer = new FakePlayerEntity();
@@ -120,13 +129,18 @@ public class SongHandler {
             building = false;
             return;
         }
-        building = true;
-        setCreativeIfNeeded();
-
-        if (stage != null) {
-            stage.movePlayerToStagePosition(true, false, true);
+        if (stage == null) {
+            stage = new Stage();
+        }
+        stage.movePlayerToStagePosition(true, false, true);
+        stage.checkBuildStatus(currentSong);
+        if (stage.nothingToBuild()) {
+            setSurvivalIfNeeded();
+            return;
         }
         SongPlayer.addChatMessage("§6Building noteblocks");
+        building = true;
+        setCreativeIfNeeded();
     }
 
     private void queueSong(Song song) {
@@ -146,9 +160,6 @@ public class SongHandler {
     private int buildCooldown = 0;
     private int updatePlayerPosCooldown = 0;
     private void handleBuilding() {
-        //if (SongPlayer.useCommandsForPlaying) {
-        //    return;
-        //}
         setBuildProgressDisplay();
         if (buildStartDelay > 0) {
             buildStartDelay--;
@@ -173,7 +184,6 @@ public class SongHandler {
             if (buildEndDelay > 0) {
                 buildEndDelay--;
                 if (oldItemHeld != null) {
-
                     inventory.setStack(inventory.selectedSlot, oldItemHeld);
                     SongPlayer.MC.interactionManager.clickCreativeStack(SongPlayer.MC.player.getStackInHand(Hand.MAIN_HAND), 36 + inventory.selectedSlot);
                     oldItemHeld = null;
@@ -449,6 +459,7 @@ public class SongHandler {
         inventory.main.set(inventory.selectedSlot, ItemStack.fromNbt(nbt));
         SongPlayer.MC.interactionManager.clickCreativeStack(SongPlayer.MC.player.getStackInHand(Hand.MAIN_HAND), 36 + inventory.selectedSlot);
     }
+
     private void placeBlock(BlockPos bp) {
         double fx = Math.max(0.0, Math.min(1.0, (stage.position.getX() - bp.getX())));
         double fy = Math.max(0.0, Math.min(1.0, (stage.position.getY() + 0.0 - bp.getY())));
@@ -477,7 +488,6 @@ public class SongHandler {
         //}
 
         SongPlayer.MC.interactionManager.attackBlock(bp, Direction.UP);
-
         if (SongPlayer.swing) {
             player.swingHand(SongPlayer.MC.player.getActiveHand());
             if (SongPlayer.fakePlayer != null) {

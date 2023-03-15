@@ -43,7 +43,7 @@ public class Stage {
 
 	public void movePlayerToStagePosition(Boolean force, Boolean enableFlight, Boolean onlyPacket) {
 		if (!force) { //check if moving the player to the stage is needed unless strictly told otherwise by the force argument
-			if (SongPlayer.useCommandsForPlaying) {
+			if (SongPlayer.useCommandsForPlaying || !SongPlayer.switchGamemode) {
 				return;
 			}
 			if (SongHandler.getInstance().stage == null) {
@@ -257,7 +257,6 @@ public class Stage {
 						}
 					}
 				}
-
 				break;
 			}
 			case "default": {
@@ -360,9 +359,7 @@ public class Stage {
 			}
 		});
 
-		for (BlockPos e : noteblockLocations) {
-			breakLocations.add(e.add(0, 1, 0));
-		}
+
 
 		// Remove already-existing notes from missingNotes, adding their positions to noteblockPositions, and create a list of unused noteblock locations
 		ArrayList<BlockPos> unusedNoteblockLocations = new ArrayList<>();
@@ -370,13 +367,15 @@ public class Stage {
 			BlockState bs = SongPlayer.MC.world.getBlockState(nbPos);
 			int blockId = Block.getRawIdFromState(bs);
 			if (blockId >= SongPlayer.NOTEBLOCK_BASE_ID && blockId < SongPlayer.NOTEBLOCK_BASE_ID+800) {
-				if (blockId % 2 == 1) {
+				if (blockId % 2 == 1) { //fixes issue with powered=true blockstate
 					blockId += 1;
 				}
 				int noteId = (blockId-SongPlayer.NOTEBLOCK_BASE_ID)/2;
 				if (missingNotes.contains(noteId)) {
 					missingNotes.remove(noteId);
 					noteblockPositions.put(noteId, nbPos);
+					//add breaklocations above all used noteblocks
+					breakLocations.add(nbPos.up());
 				} else {
 					unusedNoteblockLocations.add(nbPos);
 				}
@@ -397,11 +396,8 @@ public class Stage {
 		for (int noteId : missingNotes) {
 			BlockPos bp = unusedNoteblockLocations.get(idx++);
 			noteblockPositions.put(noteId, bp);
-			int dy = bp.getY() - position.getY();
-			// Optional break locations
-			if (dy < -1 || dy > 2) {
-				breakLocations.add(bp.up());
-			}
+			// add breaklocation above missing noteblocks
+			breakLocations.add(bp.up());
 		}
 
 		requiredBreaks = breakLocations
@@ -457,9 +453,9 @@ public class Stage {
 	}
 
 	//for survival: private static final int WRONG_INSTRUMENT_TOLERANCE = 3;
-	private static final int WRONG_INSTRUMENT_TOLERANCE = 0;
+	//private static final int WRONG_INSTRUMENT_TOLERANCE = 0;
 	public boolean hasBreakingModification() {
-		int wrongInstruments = 0;
+		//int wrongInstruments = 0;
 		for (Map.Entry<Integer, BlockPos> entry : noteblockPositions.entrySet()) {
 			BlockState bs = SongPlayer.MC.world.getBlockState(entry.getValue());
 			int blockId = Block.getRawIdFromState(bs);
@@ -470,9 +466,9 @@ public class Stage {
 			if (actualNoteId < 0 || actualNoteId >= 400) {
 				return true;
 			}
-			int actualInstrument = actualNoteId / 25;
+			//int actualInstrument = actualNoteId / 25;
 			int actualPtich = actualNoteId % 25;
-			int targetInstrument = entry.getKey() / 25;
+			//int targetInstrument = entry.getKey() / 25;
 			int targetPitch = entry.getKey() % 25;
 			if (targetPitch != actualPtich) {
 				return true;

@@ -1,6 +1,5 @@
 package com.github.hhhzzzsss.songplayer.mixin;
 
-import com.github.hhhzzzsss.songplayer.SongPlayer;
 import com.github.hhhzzzsss.songplayer.playing.ProgressDisplay;
 import net.minecraft.client.gui.hud.InGameHud;
 import net.minecraft.client.util.math.MatrixStack;
@@ -20,10 +19,11 @@ public class InGameHudMixin {
 
     @Shadow
     private int heldItemTooltipFade;
-
+    //no idea what this mixin was originally supposed to do
     @Inject(method = "render(Lnet/minecraft/client/util/math/MatrixStack;F)V",
-            at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;enableBlend()V", ordinal = 4))
-    private void onRender(MatrixStack matrixStack, float tickDelta, CallbackInfo ci) {
+            at = @At("TAIL")
+    )
+    private void render(MatrixStack matrixStack, float tickDelta, CallbackInfo ci) {
         ProgressDisplay.getInstance().onRenderHUD(matrixStack, scaledWidth, scaledHeight, heldItemTooltipFade);
     }
 }

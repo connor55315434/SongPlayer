@@ -146,6 +146,11 @@ SongPlayer will read the song file and play it on your game. No one else can hea
 This is nice if you want to test out song files before playing them for everyone else, or if you just want to enjoy your songs without any interruptions of other players.
 
 # --- CHANGELOGS ---
+### 3.1.1
+- Fixed an issue where the mod would switch to creative when it did not have to
+- Fixed an issue where the mod would break more blocks than it should when building the stage
+- 1.19.4 support
+
 ### 3.1.0
 ```
 - added new commands:
